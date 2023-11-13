@@ -1,0 +1,48 @@
+{
+  "SwaggerEndPoints": [
+    {
+      "Key": "API_Gateway",
+      "TransformByOcelotConfig": false,
+      "Config": [
+        {
+          "Name": "ABCBankingGroup.API_Gateway.Web",
+          "Version": "v1",
+          "Url": "https://localhost:7207/swagger/v1/swagger.json"
+        }
+      ]
+    },
+    {
+      "Key": "Auth",
+      "TransformByOcelotConfig": true,
+      "Config": [
+        {
+          "Name": "ABCBankingGroup.Auth API",
+          "Version": "v1",
+          "Url": "https://localhost:7214/swagger/v1/swagger.json"
+        }
+      ]
+    },
+    {
+      "Key": "Transactions",
+      "TransformByOcelotConfig": true,
+      "Config": [
+        {
+          "Name": "ABCBankingGroup.Transactions.API",
+          "Version": "v1",
+          "Url": "https://localhost:7238/swagger/v1/swagger.json"
+        }
+      ]
+    },
+    {
+      "Key": "Customers",
+      "TransformByOcelotConfig": true,
+      "Config": [
+        {
+          "Name": "ABCBankingGroup.Customers.API",
+          "Version": "v1",
+          "Url": "https://localhost:7103/swagger/v1/swagger.json"
+        }
+      ]
+    }
+  ]
+}
