@@ -34,11 +34,11 @@
       ]
     },
     {
-      "Key": "Customers",
+      "Key": "Customer",
       "TransformByOcelotConfig": true,
       "Config": [
         {
-          "Name": "ABCBankingGroup.Customers.API",
+          "Name": "ABCBankingGroup.Customer.API",
           "Version": "v1",
           "Url": "https://localhost:7103/swagger/v1/swagger.json"
         }

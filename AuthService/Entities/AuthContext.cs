@@ -7,7 +7,7 @@ namespace AuthService.Entities
     {
         public AuthContext() { }
         public AuthContext(DbContextOptions<AuthContext> options): base(options) { }
-        public DbSet<User> user { get; set; }
+        public DbSet<Customer> user { get; set; }
         public DbSet<Admin> admin { get; set; }
     }
 }

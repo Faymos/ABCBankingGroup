@@ -8,10 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <_ContentIncludedByDefault Remove="Ocelot.json" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.24" />
     <PackageReference Include="MMLib.SwaggerForOcelot" Version="6.3.2" />
     <PackageReference Include="Ocelot" Version="18.0.0" />

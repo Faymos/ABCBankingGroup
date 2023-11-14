@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Reflection;
 
-namespace AuthService.Models
+namespace CustomerService.Models
 {
     public class Customer
     {
@@ -21,7 +21,7 @@ namespace AuthService.Models
         public DateTime? DateModified { get; set; } 
         public string? ApprovedBy { get; set;}
     }
-    public class Customerdto
+    public class CustomerDto
     {
         public string? FirstName { get; set; }
         public string? MiddleName { get; set; }

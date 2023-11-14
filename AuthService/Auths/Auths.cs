@@ -147,7 +147,7 @@ namespace AuthService.Auths
             }
         }
 
-        public async Task<ResponseData> Signup(Customer user)
+        public async Task<ResponseData> Signup(Customerdto user)
         {
             ResponseData response = new();
             try
@@ -158,7 +158,7 @@ namespace AuthService.Auths
                 {
                     using (var dbContextTransaction = _authContext.Database.BeginTransaction())
                     {
-                        User user1 = new User()
+                        Customer user1 = new ()
                         {
                             FirstName = user.FirstName,
                             hashedPassed = hashedpass,
@@ -287,142 +287,5 @@ namespace AuthService.Auths
             }
         }
 
-        public async Task<ResponseData> AllPendingUser()
-        {
-            ResponseData responseData = new ResponseData();
-
-            try
-            {
-                var pendingUsers = await _authContext.user
-                    .Where(u => u.IsApproved == false)
-                    .ToListAsync();
-
-                if (pendingUsers != null)
-                {
-                    return new ResponseData
-                    {
-                        Status = HttpStatusCode.OK,
-                        ResponseMessage = "Successful",
-                        data = pendingUsers
-                    };
-                }
-                return new ResponseData
-                {
-                    Status = HttpStatusCode.OK,
-                    ResponseMessage = "Successful",
-                    data = null
-                };
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-
-        }
-
-        public async Task<ResponseData> AllPendingAdminUser()
-        {
-            ResponseData responseData = new ResponseData();
-
-            try
-            {
-                var pendingUsers = await _authContext.admin
-                    .Where(u => u.IsApproved == false)
-                    .ToListAsync();
-
-                if (pendingUsers != null)
-                {
-                    return new ResponseData
-                    {
-                        Status = HttpStatusCode.OK,
-                        ResponseMessage = "Successful",
-                        data = pendingUsers
-                    };
-                }
-                return new ResponseData
-                {
-                    Status = HttpStatusCode.OK,
-                    ResponseMessage = "Successful",
-                    data = null
-                };
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-
-        }
-
-        public async Task<Admin> GetAdminbyEmail(string email)
-        {
-            ResponseData responseData = new ResponseData();
-
-            try
-            {
-                var adminuser = await _authContext.admin
-                    .FirstOrDefaultAsync(u => u.Email == email);
-
-                if (adminuser != null)
-                {
-                    return adminuser;
-                }
-                return null;
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-
-        }
-
-        public async Task<bool> ApprovePendingAdminUser(long id,bool IsApprove ,string email)
-        {
-            ResponseData responseData = new();
-            try
-            {
-                var adminUser = await _authContext.admin.FirstOrDefaultAsync(u => u.Id == id);
-                if(adminUser != null)
-                {
-                    adminUser.IsApproved = IsApprove;
-                    adminUser.IsActive = IsApprove;
-                    adminUser.ApprovedBy = email;
-                    adminUser.DateModified = DateTime.UtcNow;
-
-                    await _authContext.SaveChangesAsync();
-
-                    return true;
-                }
-                return false;
-            }
-            catch(Exception ex) 
-            {
-                throw ex;
-            }
-        }
-
-        public async Task<bool> ApprovePendingUser(long id, bool IsApprove, string email)
-        {
-            ResponseData responseData = new();
-            try
-            {
-                var user1 = await _authContext.user.FirstOrDefaultAsync(u => u.Id == id);
-                if (user1 != null)
-                {
-                    user1.IsApproved = IsApprove;
-                    user1.IsActive = IsApprove;
-                    user1.ApprovedBy = email;
-                    user1.DateModified = DateTime.UtcNow;
-
-                    await _authContext.SaveChangesAsync();
-
-                    return true;
-                }
-                return false;
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-        }
     }
 }

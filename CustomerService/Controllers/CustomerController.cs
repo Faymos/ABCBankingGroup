@@ -1,5 +1,9 @@
+using CustomerService.Models;
+using CustomerService.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
+using System.Net;
 
 namespace CustomerService.Controllers
 {
@@ -10,16 +14,91 @@ namespace CustomerService.Controllers
     {
        
         private readonly ILogger<CustomerController> _logger;
+        private readonly ICustomerServices _customerServices;
 
-        public CustomerController(ILogger<CustomerController> logger)
+        public CustomerController(ILogger<CustomerController> logger, ICustomerServices customer)
         {
             _logger = logger;
+            _customerServices = customer;
         }
-        [HttpGet("get")]
-        public async Task<IActionResult> get()
+
+        [HttpGet("GetAllPendingApproval")]
+        [Authorize]
+        public async Task<ResponseData> GetAllPendingApproval()
         {
-            return null;
+            return await _customerServices.AllPendingUser();
         }
-       
+
+        [HttpGet("GetAllPendingAdmin")]
+        [Authorize]
+        public async Task<ResponseData> GetAllPendingAdmin()
+        {
+            return await _customerServices.AllPendingAdminUser();
+        }
+
+        [HttpPost("ApprovePendingAdmin/{id}")]
+        [Authorize]
+        public async Task<ResponseData> ApprovePendingAdmin(long id, bool isApprove)
+        {
+            string email = this.User.Claims.ToList()[0].Value;
+            Admin adminuser = await _customerServices.GetAdminbyEmail(email.Trim());
+            if (adminuser != null && adminuser.RoleId == Role.SuperAdmin)
+            {
+                if (await _customerServices.ApprovePendingAdminUser(id, isApprove, email))
+                {
+                    return new ResponseData()
+                    {
+                        Status = HttpStatusCode.OK,
+                        ResponseMessage = "Successful"
+                    };
+                }
+
+                return new ResponseData()
+                {
+                    Status = HttpStatusCode.BadRequest,
+                    ResponseMessage = "Failed"
+                };
+            }
+
+            return new ResponseData()
+            {
+                Status = HttpStatusCode.Unauthorized,
+                ResponseMessage = "You Did not have permission to Approve"
+            };
+
+        }
+
+        [HttpPost("ApprovePendingUser/{id}")]
+        [Authorize]
+        public async Task<ResponseData> ApprovePendingUser(long id, bool isApprove)
+        {
+            string email = this.User.Claims.ToList()[0].Value;
+            Admin adminuser = await _customerServices.GetAdminbyEmail(email.Trim());
+            if (adminuser != null && adminuser.RoleId == Role.SuperAdmin)
+            {
+                if (await _customerServices.ApprovePendingUser(id, isApprove, email))
+                {
+                    return new ResponseData()
+                    {
+                        Status = HttpStatusCode.OK,
+                        ResponseMessage = "Successful"
+                    };
+                }
+
+                return new ResponseData()
+                {
+                    Status = HttpStatusCode.BadRequest,
+                    ResponseMessage = "Failed"
+                };
+            }
+
+            return new ResponseData()
+            {
+                Status = HttpStatusCode.Unauthorized,
+                ResponseMessage = "You Did not have permission to Approve"
+            };
+
+        }
+
     }
 }
