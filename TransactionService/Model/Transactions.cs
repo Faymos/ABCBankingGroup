@@ -12,9 +12,9 @@
         public string BeneficiaryName { get; set; }
         public string BeneficiaryAccount { get; set; }
         public string BeneficiaryBank { get; set; }
-        public TransType Type { get; set; }
-        public TransMethod TransMethod { get; set; }
-        public string? CustomerAccountId { get; set; }
+        public string Type { get; set; }
+        public string TransMethod { get; set; }
+        public int CustomerAccountId { get; set; }
     }
     public enum TransType
     {

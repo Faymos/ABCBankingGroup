@@ -1,11 +1,14 @@
-
 using API_Gateway.Config;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using MMLib.SwaggerForOcelot.Configuration;
 using MMLib.SwaggerForOcelot.DependencyInjection;
 using Ocelot.DependencyInjection;
 using Ocelot.Middleware;
 using Ocelot.Provider.Polly;
+using Ocelot.Values;
+using System.Net.Http.Headers;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,19 +20,16 @@ builder.Configuration.AddOcelotWithSwaggerSupport(option =>
 });
 builder.Services.AddOcelot(builder.Configuration).AddPolly();
 builder.Services.AddSwaggerForOcelot(builder.Configuration);
-var enviroment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
 builder.Configuration.SetBasePath(Directory.GetCurrentDirectory())
     .AddOcelot(routes, builder.Environment)
     .AddEnvironmentVariables();
 
-string Key = builder.Configuration["Jwt:Key"];
+string key = builder.Configuration["Jwt:Key"];
 string issuer = builder.Configuration["Jwt:Issuer"];
 string audience = builder.Configuration["Jwt:Audience"];
 
-
-builder.Services.AddAuthentication(
-    JwtBearerDefaults.AuthenticationScheme
-    )
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer("ProviderKey", options =>
     {
         options.RequireHttpsMetadata = false;
@@ -40,31 +40,23 @@ builder.Services.AddAuthentication(
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Key)),
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
             ValidIssuer = issuer,
             ValidAudience = audience,
         };
     });
 
-// Add services to the container.
-
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Add the following line to allow insecure docs
 
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    
-  
-}
-
 app.UseSwagger();
+app.UseDeveloperExceptionPage();
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.UseSwaggerForOcelotUI(opt =>
@@ -73,8 +65,7 @@ app.UseSwaggerForOcelotUI(opt =>
     opt.ReConfigureUpstreamSwaggerJson = AlterUpstreams.AlterUpstreamSwaggerJson;
 
 }).UseOcelot().Wait();
-app.UseDeveloperExceptionPage();
-
+app.UseHttpsRedirection();
+app.UseAuthorization();
 app.MapControllers();
-
 app.Run();

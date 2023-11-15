@@ -14,7 +14,7 @@ string issuer = builder.Configuration["Jwt:Issuer"];
 string audience = builder.Configuration["Jwt:Audience"];
 
 // Add services to the container.
-builder.Services.AddScoped<WalletTransactions, WalletTransactions>();
+builder.Services.AddScoped<IWalletTransaction, WalletTransactions>();
 builder.Services.AddControllers();
 builder.Services.AddDbContext<TransactionDbContext>(item =>
 {
