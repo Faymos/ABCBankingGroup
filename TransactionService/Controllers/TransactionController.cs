@@ -22,7 +22,7 @@ namespace TransactionService.Controllers
         }
 
         [HttpPost("deposit")]
-        public async Task<ActionResult> Deposit(string accountNumber, float amount)
+        public async Task<ActionResult> Deposit(string accountNumber, decimal amount)
         {
             try
             {
@@ -37,7 +37,7 @@ namespace TransactionService.Controllers
         }
 
         [HttpPost("withdraw")]
-        public async Task<ActionResult> Withdraw(string accountNumber, float amount)
+        public async Task<ActionResult> Withdraw(string accountNumber, decimal amount)
         {
             try
             {
@@ -52,7 +52,7 @@ namespace TransactionService.Controllers
         }
 
         [HttpPost("transfer")]
-        public async Task<ActionResult> Transfer(string sourceAccountNumber, float amount, string targetAccountNumber)
+        public async Task<ActionResult> Transfer(string sourceAccountNumber, decimal amount, string targetAccountNumber)
         {
             try
             {
@@ -67,7 +67,7 @@ namespace TransactionService.Controllers
         }
         
         [HttpPost("InterBanktransfer")]
-        public async Task<ActionResult> TransferOtherBank(string sourceAccountNumber, float amount, string targetAccountNumber, string bankcode)
+        public async Task<ActionResult> TransferOtherBank(string sourceAccountNumber, decimal amount, string targetAccountNumber, string bankcode)
         {
             try
             {
@@ -110,6 +110,17 @@ namespace TransactionService.Controllers
             {
                 return BadRequest($"Error: {ex.Message}");
             }
+        }
+
+        [HttpGet("getaccountName")]
+        public async Task<IActionResult> AccountVerification(string accountNumber)
+        {
+            var result = await _walletTransactions.AccountVerification(accountNumber);
+           if (result == null)
+            {
+                return NotFound();
+            }
+           return Ok(result);
         }
     }
 }

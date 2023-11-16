@@ -26,7 +26,7 @@ namespace TransactionService.Services
         public async Task<ResponseData> GetStatements(string accountNumber, DateTime startDate, DateTime endDate)
         {
             var result = await _dbContext.transactions
-                .Where(u => u.AccountNumber == accountNumber && u.DateCreated >= startDate && u.DateCreated <= endDate)
+                .Where(u => u.AccountNumber == accountNumber.Trim() && u.DateCreated >= startDate && u.DateCreated <= endDate)
                 .ToListAsync();
 
             return new ResponseData
@@ -44,8 +44,14 @@ namespace TransactionService.Services
 
             return result ?? "Account not found";
         }
+        public async Task<string> AccountVerification(string accountNumber)
+        {
+            var result = _dbContext.customerAccount
+                .FirstOrDefault(u => u.AccountNumber == accountNumber)?.AccountName.ToString();
 
-        public async Task<ResponseData> Deposit(string accountNumber, double amount)
+            return result ?? null;
+        }
+        public async Task<ResponseData> Deposit(string accountNumber, decimal amount)
         {
             // Find the existing record in the database
             var existingAccount = await _dbContext.customerAccount
@@ -55,14 +61,15 @@ namespace TransactionService.Services
             {
                 TransMethod = TransMethod.deposit.ToString(),
                 Type = TransType.cr.ToString(),
-                AccountNumber= accountNumber,
-                Amount= amount,
+                AccountNumber = accountNumber,
+                Amount = amount,
                 BeneficiaryAccount = existingAccount.AccountNumber,
                 BeneficiaryBank = "ABC BANKING GROUP ",
                 BeneficiaryName = existingAccount.AccountName,
                 CustomerAccountId = existingAccount.Id,
                 DateCreated = DateTime.UtcNow,
                 SenderName = existingAccount.AccountName,
+                SessionId = getSessionId(),
                 Remarks= "Self Deposit"
             };
 
@@ -101,8 +108,7 @@ namespace TransactionService.Services
             }
 
         }
-
-        public async Task<ResponseData> Withdrawal(string accountNumber, double amount)
+        public async Task<ResponseData> Withdrawal(string accountNumber, decimal amount)
         {
             try
             {
@@ -119,7 +125,8 @@ namespace TransactionService.Services
                         Amount = amount,
                         CustomerAccountId = result.Id,
                         DateCreated = DateTime.UtcNow,
-                        Remarks = "Self Withdrawal"
+                        Remarks = "Self Withdrawal",
+                        SessionId = getSessionId()
                     };
 
                     result.CurrentBalance -= amount;
@@ -157,13 +164,129 @@ namespace TransactionService.Services
                 throw ex;
             }
         }
-
-        public Task<ResponseData> Transfer(string accountNumber, string DestinationAccount, double amount)
+        public async Task<ResponseData> Transfer(string accountNumber, string DestinationAccount, decimal amount)
         {
-            throw new NotImplementedException();
-        }
+            try
+            {
+                var result = await _dbContext.customerAccount
+               .FirstOrDefaultAsync(u => u.AccountNumber == accountNumber);
 
-        public Task<ResponseData> TransferToOtherBank(string accountNumber, string DestinationAccount, string bankCode, double amount)
+                if (viaableTransaction(result.CurrentBalance, amount))
+                {
+                    var result2 = await _dbContext.customerAccount
+               .FirstOrDefaultAsync(u => u.AccountNumber == DestinationAccount);
+                    var sessionid = getSessionId();
+
+                    Transactions transactions = new()
+                    {
+                        TransMethod = TransMethod.transfer.ToString(),
+                        Type = TransType.dr.ToString(),
+                        AccountNumber = accountNumber,
+                        Amount = amount,
+                        CustomerAccountId = result.Id,
+                        DateCreated = DateTime.UtcNow,
+                        SenderAccount = result.AccountNumber,
+                        SenderBank= "ABC Banking Group",
+                        SenderName = result.AccountName,
+                        BeneficiaryAccount= result2.AccountNumber,
+                        BeneficiaryBank = "ABC Banking Group",
+                        BeneficiaryName = result2.AccountName,
+                        Remarks = $"transfer to  {result2.AccountName}",
+                        SessionId = sessionid
+                    };
+
+                    result.CurrentBalance -= amount;
+                    result.DrAmount += amount;
+                    result.TotalBalance -= amount;
+                    result.DateUpdated = DateTime.UtcNow;
+
+                    await _dbContext.SaveChangesAsync();
+
+                    if (await TransactionsDetails(transactions))
+                    {
+                        return await SameBankDeposit(DestinationAccount, amount,accountNumber, result.AccountName, sessionid);
+                    }
+                    else
+                    {
+
+                        return null;
+                    }
+
+                }
+                else
+                {
+                    return new ResponseData
+                    {
+                        Status = HttpStatusCode.BadRequest,
+                        ResponseMessage = "Insufficient balance"
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+        public async Task<ResponseData> SameBankDeposit(string accountNumber, decimal amount, string senderaccount, string sendername, string sessionId)
+        {
+            // Find the existing record in the database
+            var existingAccount = await _dbContext.customerAccount
+                .FirstOrDefaultAsync(u => u.AccountNumber == accountNumber);
+
+            Transactions transactions = new()
+            {
+                TransMethod = TransMethod.transfer.ToString(),
+                Type = TransType.cr.ToString(),
+                AccountNumber = existingAccount.AccountNumber,
+                Amount = amount,
+                CustomerAccountId = existingAccount.Id,
+                DateCreated = DateTime.UtcNow,
+                SenderAccount = senderaccount,
+                SenderBank = "ABC Banking Group",
+                SenderName = sendername,
+                BeneficiaryAccount = existingAccount.AccountNumber,
+                BeneficiaryBank = "ABC Banking Group",
+                BeneficiaryName = existingAccount.AccountName,
+                Remarks = $"transfer from  {sendername}",
+                SessionId = sessionId
+            };
+
+            if (existingAccount != null)
+            {
+                
+                existingAccount.CurrentBalance += amount;
+                existingAccount.CrAmount += amount;
+                existingAccount.TotalBalance += amount;
+                existingAccount.DateUpdated = DateTime.UtcNow;
+                if (await _dbContext.SaveChangesAsync() > 0)
+                {
+                    if (await TransactionsDetails(transactions))
+                    {
+                        return new ResponseData()
+                        {
+                            ResponseMessage = "Successful",
+                            Status = HttpStatusCode.OK
+                        };
+                    }
+                    else
+                    {
+
+                        return null;
+                    }
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Customer account with account number {accountNumber} not found.");
+                }
+
+            }
+            else
+            {
+                throw new InvalidOperationException($"Customer account with account number {accountNumber} not found.");
+            }
+
+        }
+        public Task<ResponseData> TransferToOtherBank(string accountNumber, string DestinationAccount, string bankCode, decimal amount)
         {
             throw new NotImplementedException();
         }
@@ -185,13 +308,19 @@ namespace TransactionService.Services
             }
         }
 
-        private  bool viaableTransaction(double currentBalance, double amount)
+        private  bool viaableTransaction(decimal currentBalance, decimal amount)
         {           
             if (currentBalance > amount)
             {
                 return true;
             }
             return false;
+        }
+
+        private static string getSessionId()
+        {
+            Random rxd = new();
+            return DateTime.Now.ToString("yyMMddHHmmss") + rxd.Next(9999).ToString();
         }
     }
 }
