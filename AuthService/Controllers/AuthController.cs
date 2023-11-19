@@ -36,6 +36,16 @@ namespace AuthService.Controllers
         {
             return await _auths.Admin(login);
         }
+        [HttpPost("changepassword")]
+        public async Task<ResponseData> changepassword(string email, string enteredToken, string newPassword)
+        {
+            return await _auths.ChangePassword(email, enteredToken, newPassword);
+        }
 
+        [HttpPost("resetPassword")]
+        public async Task<string> resetPassword(string email)
+        {
+            return await _auths.ResetPassword(email);
+        }
     }
 }

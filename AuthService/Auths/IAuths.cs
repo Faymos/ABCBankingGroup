@@ -8,6 +8,7 @@ namespace AuthService.Auths
         Task<ResponseData> login(Login login);
         Task<ResponseData> Signup(Customerdto user);
         Task<ResponseData> Admin(Login login);
-       
+        Task<ResponseData> ChangePassword(string email, string enteredToken, string newPassword);
+        Task<string> ResetPassword(string email);
     }
 }

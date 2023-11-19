@@ -1,9 +1,11 @@
 ﻿using AuthService.Entities;
 using AuthService.Models;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
+using System.Net.Mail;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -65,7 +67,7 @@ namespace AuthService.Auths
             ResponseData response = new();
             try
             {
-                var user1 = await _authContext.user.SingleOrDefaultAsync(u => u.Email == login.Email && u.IsApproved == true);
+                var user1 = await _authContext.customer.SingleOrDefaultAsync(u => u.Email == login.Email && u.IsApproved == true);
 
                 if (user1 != null)
                 {
@@ -172,7 +174,7 @@ namespace AuthService.Auths
                         };
 
 
-                        _authContext.user.Add(user1);
+                        _authContext.customer.Add(user1);
                         if (await _authContext.SaveChangesAsync() > 0)
                         {
                             dbContextTransaction.Commit();
@@ -286,6 +288,142 @@ namespace AuthService.Auths
                 throw ex;
             }
         }
+        public async Task<ResponseData> ChangePassword(string email, string enteredToken, string newPassword)
+        {
+            try
+            {
+                if (await VerifyToken(email, enteredToken))
+                {
+                    string passsword = HashPassword(newPassword);
 
+                    var result = await _authContext.customer.FirstOrDefaultAsync(u => u.Email == email);
+                    if (result != null)
+                    {
+                        result.hashedPassed = passsword;
+                        result.DateModified = DateTime.UtcNow;
+                        await _authContext.SaveChangesAsync();
+
+                        return new ResponseData()
+                        {
+                            Status = HttpStatusCode.OK,
+                            ResponseMessage = "Password reset successful"
+                        };
+                    }
+                    return new ResponseData()
+                    {
+                        Status = HttpStatusCode.NotFound,
+                        ResponseMessage = "Token verification failed. Password reset aborted. invalid token or email"
+                    };
+                }
+                else
+                {
+                    return new ResponseData()
+                    {
+                        Status = HttpStatusCode.NotFound,
+                        ResponseMessage = "Token verification failed. Password reset aborted. invalid token or email"
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+        public async Task<string> ResetPassword(string email)
+        {
+            var user1 = await _authContext.customer.SingleOrDefaultAsync(u => u.Email == email && u.IsApproved == true);
+
+            if (user1 != null && user1.Email.Contains(email))
+            {
+                string token = GenerateToken();
+                 Tokens tokens = new()
+                 {
+                     Email = email,
+                     Token = token,
+                     DateCreated = DateTime.Now,
+                     IsActive = true
+                 };
+
+                 _authContext.tokens.Add(tokens);
+                await _authContext.SaveChangesAsync();
+                // send it to email 
+
+                await NotifyCustomer(tokens, user1.FirstName);
+
+                return " reset code sent to your email";
+            }
+            else
+            {
+                return "User not found. Password reset aborted.";
+            }
+        }
+
+        static string GenerateToken()
+        {
+            return Guid.NewGuid().ToString();
+        }
+
+       public async Task<bool> VerifyToken(string email, string enteredToken)
+        {
+            var tokenDatabase = await _authContext.tokens.FirstOrDefaultAsync(u => u.Email == email && u.Token == enteredToken && u.IsActive == true);
+
+            if (tokenDatabase != null)
+            {
+                tokenDatabase.IsActive =false;
+                tokenDatabase.DateUpdated = DateTime.Now;
+                await _authContext.SaveChangesAsync();
+                return true;
+            }
+
+            return false;
+        }
+
+        public async Task<bool> NotifyCustomer(Tokens customer, string name)
+        {
+            try
+            {
+                string fromEmail = "abcbankinggroupltd@gmail.com";
+                string password = "qlyd qpuq msno exxn";
+                string toEmail = customer.Email.Trim();
+
+                // Create the MailMessage object
+                using (MailMessage mailMessage = new MailMessage(fromEmail, toEmail)
+                {
+                    Subject = $"Password Reset Token",
+                    Body = $" Hello {name}, kindly find the token to change your password {customer.Token}. Thanks",
+                    IsBodyHtml = true
+                })
+                {
+
+                    // Create the SmtpClient
+                    using (SmtpClient smtpClient = new SmtpClient("smtp.gmail.com"))
+                    {
+                        smtpClient.Port = 587;
+                        smtpClient.Credentials = new NetworkCredential(fromEmail, password);
+                        smtpClient.EnableSsl = true;
+
+                        try
+                        {
+                            // Send the email
+                            await smtpClient.SendMailAsync(mailMessage);
+                            return true;
+                        }
+                        catch (Exception ex)
+                        {
+                            // Log the exception using a logging library
+                            Console.WriteLine($"Error sending email: {ex.Message}");
+                            throw ex;
+                        }
+                    }
+                }
+            }
+
+
+            catch (Exception ex)
+            {
+                // Log the exception using a logging library
+                throw ex;
+            }
+        }
     }
 }
