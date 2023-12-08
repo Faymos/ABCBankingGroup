@@ -54,6 +54,10 @@ namespace TransactionService.Controllers
         [HttpPost("transfer")]
         public async Task<ActionResult> Transfer(string sourceAccountNumber, decimal amount, string targetAccountNumber)
         {
+            if (sourceAccountNumber == targetAccountNumber)
+            {
+                return BadRequest($"Error: source and destination account can not be the same");
+            }
             try
             {
                
@@ -69,6 +73,11 @@ namespace TransactionService.Controllers
         [HttpPost("InterBanktransfer")]
         public async Task<ActionResult> TransferOtherBank(string sourceAccountNumber, decimal amount, string targetAccountNumber, string bankcode)
         {
+
+            if (sourceAccountNumber == targetAccountNumber)
+            {
+                return BadRequest($"Error: source and destination account can not be the same");
+            }
             try
             {
 
@@ -97,12 +106,26 @@ namespace TransactionService.Controllers
             }
         }
 
+        [HttpGet("statement")]
+        public async Task<ActionResult> Statement(string accountNumber)
+        {
+            try
+            {
+
+                var result = await _walletTransactions.GetStatement(accountNumber);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error: {ex.Message}");
+            }
+        }
         [HttpGet("statements")]
         public async Task<ActionResult> Statements(string accountNumber, DateTime startdate, DateTime enddate)
         {
             try
             {
-
+               
                 var result = await _walletTransactions.GetStatements(accountNumber, startdate, enddate);
                 return Ok(result);
             }
@@ -121,6 +144,22 @@ namespace TransactionService.Controllers
                 return NotFound();
             }
            return Ok(result);
+        }
+
+        [HttpGet("Overdraft")]
+        public async Task<ActionResult> Overdraft()
+        {
+            try
+            {
+                // Assuming WalletAccount is a class with a GetBalance method
+                var result = await _walletTransactions.Overdraft();
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error: {ex.Message}");
+            }
         }
     }
 }

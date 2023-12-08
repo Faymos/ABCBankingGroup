@@ -146,6 +146,7 @@ namespace CustomerService.Services
                     user1.IsActive = IsApprove;
                     user1.ApprovedBy = email;
                     user1.DateModified = DateTime.UtcNow;
+                    user1.Status = IsApprove? "Approved" : "Rejected";
 
                     await _context.SaveChangesAsync();
                    if(IsApprove)
@@ -174,7 +175,7 @@ namespace CustomerService.Services
                 using (var connection = new SqlConnection(_context.Database.GetConnectionString()))
                 using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = "InsertCustomerAccount";
+                    command.CommandText = "sp_CustomerAccount";
                     command.CommandType = CommandType.StoredProcedure;
                     
                     // Add parameters
@@ -257,5 +258,220 @@ namespace CustomerService.Services
             }
         }
 
+        public async Task<ResponseData> AllApprovedCustomerAccount()
+        {
+            
+            try
+            {
+                var allUsers = await _context.customerAccount
+                    .ToListAsync();
+
+                return new ResponseData
+                {
+                    Status = HttpStatusCode.OK,
+                    ResponseMessage = "Successful",
+                    data = allUsers
+                };
+            }
+            catch (Exception ex)
+            {
+              
+                return new ResponseData
+                {
+                    Status = HttpStatusCode.InternalServerError,
+                    ResponseMessage = $"An error occurred {ex.Message}",
+                    data = null
+                };
+            }
+
+        }
+
+        public async Task<ResponseData> CustomerAccount(int id)
+        {
+            ResponseData responseData = new ResponseData();
+
+            try
+            {
+                var pendingUsers = await _context.customerAccount
+                    .FirstOrDefaultAsync(u => u.CustomerId == id);
+                   
+
+                if (pendingUsers != null)
+                {
+                    return new ResponseData
+                    {
+                        Status = HttpStatusCode.OK,
+                        ResponseMessage = "Successful",
+                        data = pendingUsers
+                    };
+                }
+                return new ResponseData
+                {
+                    Status = HttpStatusCode.OK,
+                    ResponseMessage = "Successful",
+                    data = null
+                };
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+
+        }
+        public async Task<ResponseData> DeleteCustomerAccount(int id)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_context.Database.GetConnectionString()))
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "sp_CustomerAccount";
+                    command.CommandType = CommandType.StoredProcedure;
+
+                    // Add parameters
+                    command.Parameters.AddWithValue("@Status", 3);
+                    command.Parameters.AddWithValue("@CustomerId", id);               
+
+                        await connection.OpenAsync();
+                        var result = await command.ExecuteNonQueryAsync();
+                        if(result > 0)
+                        {
+                            return new ResponseData()
+                            {
+                                Status = HttpStatusCode.OK,
+                                ResponseMessage = "Successful"
+                            };
+                        }
+                    return new ResponseData()
+                    {
+                        Status = HttpStatusCode.NotFound,
+                        ResponseMessage = "Failed"
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the exception or handle it in a meaningful way
+                _logger.LogError($"An error occurred: {ex.Message}");
+              
+                return new ResponseData()
+                {
+                    Status = HttpStatusCode.BadGateway,
+                    ResponseMessage = $"failed {ex.Message}"
+                };
+            }
+        }
+        public async Task<ResponseData> DeActivateCustomerAccount(int id)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_context.Database.GetConnectionString()))
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "sp_CustomerAccount";
+                    command.CommandType = CommandType.StoredProcedure;
+
+                    // Add parameters
+                    command.Parameters.AddWithValue("@Status", 4);
+                    command.Parameters.AddWithValue("@CustomerId", id);
+
+                    await connection.OpenAsync();
+                    var result = await command.ExecuteNonQueryAsync();
+                    if (result > 0)
+                    {
+                        return new ResponseData()
+                        {
+                            Status = HttpStatusCode.OK,
+                            ResponseMessage = "Successful"
+                        };
+                    }
+                    return new ResponseData()
+                    {
+                        Status = HttpStatusCode.NotFound,
+                        ResponseMessage = "Failed"
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the exception or handle it in a meaningful way
+                _logger.LogError($"An error occurred: {ex.Message}");
+
+                return new ResponseData()
+                {
+                    Status = HttpStatusCode.BadGateway,
+                    ResponseMessage = $"failed {ex.Message}"
+                };
+            }
+        }
+        public async Task<ResponseData> ReActivateCustomerAccount(int id)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_context.Database.GetConnectionString()))
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "sp_CustomerAccount";
+                    command.CommandType = CommandType.StoredProcedure;
+
+                    // Add parameters
+                    command.Parameters.AddWithValue("@Status", 5);
+                    command.Parameters.AddWithValue("@CustomerId", id);
+
+                    await connection.OpenAsync();
+                    var result = await command.ExecuteNonQueryAsync();
+                    if (result > 0)
+                    {
+                        return new ResponseData()
+                        {
+                            Status = HttpStatusCode.OK,
+                            ResponseMessage = "Successful"
+                        };
+                    }
+                    return new ResponseData()
+                    {
+                        Status = HttpStatusCode.NotFound,
+                        ResponseMessage = "Failed"
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the exception or handle it in a meaningful way
+                _logger.LogError($"An error occurred: {ex.Message}");
+
+                return new ResponseData()
+                {
+                    Status = HttpStatusCode.BadGateway,
+                    ResponseMessage = $"failed {ex.Message}"
+                };
+            }
+        }
+        public async Task<ResponseData> GetAllCustomer()
+        {
+
+            try
+            {
+                var allUsers = await _context.customer
+                    .ToListAsync();
+
+                return new ResponseData
+                {
+                    Status = HttpStatusCode.OK,
+                    ResponseMessage = "Successful",
+                    data = allUsers
+                };
+            }
+            catch (Exception ex)
+            {
+
+                return new ResponseData
+                {
+                    Status = HttpStatusCode.InternalServerError,
+                    ResponseMessage = $"An error occurred {ex.Message}",
+                    data = null
+                };
+            }
+        }
     }
 }

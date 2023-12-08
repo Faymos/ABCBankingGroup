@@ -20,6 +20,7 @@ namespace CustomerService.Models
         public DateTime DateCreated { get; set; } = DateTime.Now;
         public DateTime? DateModified { get; set; } 
         public string? ApprovedBy { get; set;}
+        public string? Status { get; set; }
     }
     public class CustomerDto
     {

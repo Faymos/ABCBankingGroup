@@ -9,7 +9,7 @@ namespace AuthService.Controllers
 {
     [ApiController]
     [Route("api/v1/[Controller]")]
-    [EnableCors]
+   
     public class AuthController : ControllerBase
     {
         private readonly IAuths _auths;
@@ -28,12 +28,28 @@ namespace AuthService.Controllers
         [HttpPost("Login")]
         public async Task<ResponseData> Login(Login login)
         {
+            if(string.IsNullOrEmpty(login.Email) || string.IsNullOrEmpty(login.Password))
+            {
+                return new ResponseData()
+                {
+                    Status = HttpStatusCode.Unauthorized,
+                    ResponseMessage = "Invalid input details "
+                };
+            }
             return await _auths.login(login);
         }
 
         [HttpPost("Admin")]
         public async Task<ResponseData> Admin([FromBody] Login login)
         {
+            if (string.IsNullOrEmpty(login.Email) || string.IsNullOrEmpty(login.Password))
+            {
+                return new ResponseData()
+                {
+                    Status = HttpStatusCode.Unauthorized,
+                    ResponseMessage = "Invalid input details "
+                };
+            }
             return await _auths.Admin(login);
         }
         [HttpPost("changepassword")]
@@ -43,7 +59,7 @@ namespace AuthService.Controllers
         }
 
         [HttpPost("resetPassword")]
-        public async Task<string> resetPassword(string email)
+        public async Task<ResponseData> resetPassword(string email)
         {
             return await _auths.ResetPassword(email);
         }

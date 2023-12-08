@@ -55,6 +55,14 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+// Enable CORS with specific configuration
+app.UseCors(builder => builder
+    .AllowAnyOrigin()
+    .AllowAnyMethod()
+    .AllowAnyHeader()
+);
+
+
 app.UseSwagger();
 app.UseDeveloperExceptionPage();
 app.UseHttpsRedirection();

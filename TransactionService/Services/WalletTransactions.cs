@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 using System.Net;
 using System.Threading.Tasks;
 using System.Transactions;
@@ -11,10 +13,12 @@ namespace TransactionService.Services
     public class WalletTransactions : IWalletTransaction
     {
         private readonly TransactionDbContext _dbContext;
+        private readonly ILogger<WalletTransactions> _logger;
 
-        public WalletTransactions(TransactionDbContext dbContext)
+        public WalletTransactions(TransactionDbContext dbContext, ILogger<WalletTransactions> logger)
         {
             _dbContext = dbContext;
+            _logger = logger;
         }
 
         public async Task<CustomerAccount> GetCustomerAccount(string accountNumber)
@@ -25,16 +29,68 @@ namespace TransactionService.Services
 
         public async Task<ResponseData> GetStatements(string accountNumber, DateTime startDate, DateTime endDate)
         {
-            var result = await _dbContext.transactions
-                .Where(u => u.AccountNumber == accountNumber.Trim() && u.DateCreated >= startDate && u.DateCreated <= endDate)
-                .ToListAsync();
-
-            return new ResponseData
+            using (var connection = new SqlConnection(_dbContext.Database.GetConnectionString()))
+            using (var command = connection.CreateCommand())
             {
-                Status = HttpStatusCode.OK,
-                ResponseMessage = "Successful",
-                data = result
-            };
+                command.CommandText = "[dbo].[sp_Transactions]";
+                command.CommandType = CommandType.StoredProcedure;
+
+                // Add parameters
+                command.Parameters.AddWithValue("@Status", 2);
+                command.Parameters.AddWithValue("@AccountNumber", accountNumber);
+                command.Parameters.AddWithValue("@StartDate", startDate);
+                command.Parameters.AddWithValue("@EndDate", endDate);
+
+                try
+                {
+                    await connection.OpenAsync();
+                    // Use ExecuteReaderAsync to read the result set
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        var resultData = new List<Transactions>();
+
+                        while (await reader.ReadAsync())
+                        {
+
+                            var transaction = new Transactions
+                            {
+
+                                Id = reader.GetInt32(reader.GetOrdinal("Id")),
+                                DateCreated = reader.GetDateTime(reader.GetOrdinal("DateCreated")),
+                                Amount = reader.GetDecimal(reader.GetOrdinal("Amount")),
+                                AccountNumber = reader.GetString(reader.GetOrdinal("AccountNumber")),
+                                SenderName = reader.IsDBNull(reader.GetOrdinal("SenderName")) ? null : reader.GetString(reader.GetOrdinal("SenderName")),
+                                SenderAccount = reader.IsDBNull(reader.GetOrdinal("SenderAccount")) ? null : reader.GetString(reader.GetOrdinal("SenderAccount")),
+                                SenderBank = reader.IsDBNull(reader.GetOrdinal("SenderBank")) ? null : reader.GetString(reader.GetOrdinal("SenderBank")),
+                                Remarks = reader.IsDBNull(reader.GetOrdinal("Remarks")) ? null : reader.GetString(reader.GetOrdinal("Remarks")),
+                                BeneficiaryName = reader.IsDBNull(reader.GetOrdinal("BeneficiaryName")) ? null : reader.GetString(reader.GetOrdinal("BeneficiaryName")),
+                                BeneficiaryAccount = reader.IsDBNull(reader.GetOrdinal("BeneficiaryAccount")) ? null : reader.GetString(reader.GetOrdinal("BeneficiaryAccount")),
+                                BeneficiaryBank = reader.IsDBNull(reader.GetOrdinal("BeneficiaryBank")) ? null : reader.GetString(reader.GetOrdinal("BeneficiaryBank")),
+                                Type = reader.GetString(reader.GetOrdinal("Type")),
+                                TransMethod = reader.GetString(reader.GetOrdinal("TransMethod")),
+                                SessionId = reader.GetString(reader.GetOrdinal("SessionId")),
+                                CustomerAccountId = reader.GetInt32(reader.GetOrdinal("CustomerAccountId"))
+
+
+                            };
+
+                            resultData.Add(transaction);
+                        }
+
+                        return new ResponseData
+                        {
+                            Status = HttpStatusCode.OK,
+                            ResponseMessage = "Successful",
+                            data = resultData
+                        };
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError($"An error occurred: {ex.Message}");
+                    throw;
+                }
+            }
         }
 
         public async Task<string> GetBalance(string accountNumber)
@@ -115,7 +171,7 @@ namespace TransactionService.Services
                 var result = await _dbContext.customerAccount
                .FirstOrDefaultAsync(u => u.AccountNumber == accountNumber);
 
-                if (viaableTransaction(result.CurrentBalance, amount))
+                if (viaableTransaction(result.CurrentBalance, amount,result.Id))
                 {
                     Transactions transactions = new()
                     {
@@ -171,7 +227,7 @@ namespace TransactionService.Services
                 var result = await _dbContext.customerAccount
                .FirstOrDefaultAsync(u => u.AccountNumber == accountNumber);
 
-                if (viaableTransaction(result.CurrentBalance, amount))
+                if (viaableTransaction(result.CurrentBalance, amount, result.Id))
                 {
                     var result2 = await _dbContext.customerAccount
                .FirstOrDefaultAsync(u => u.AccountNumber == DestinationAccount);
@@ -308,11 +364,15 @@ namespace TransactionService.Services
             }
         }
 
-        private  bool viaableTransaction(decimal currentBalance, decimal amount)
+        private  bool viaableTransaction(decimal currentBalance, decimal amount, int id)
         {           
             if (currentBalance > amount)
             {
                 return true;
+            }
+            else if(overDaftAmount(id))
+            { 
+                return true; 
             }
             return false;
         }
@@ -321,6 +381,84 @@ namespace TransactionService.Services
         {
             Random rxd = new();
             return DateTime.Now.ToString("yyMMddHHmmss") + rxd.Next(9999).ToString();
+        }
+
+        public async Task<ResponseData> GetStatement(string accountNumber)
+        {
+            using (var connection = new SqlConnection(_dbContext.Database.GetConnectionString()))
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = "[dbo].[sp_Transactions]";
+                command.CommandType = CommandType.StoredProcedure;
+
+                // Add parameters
+                command.Parameters.AddWithValue("@Status", 1);
+                command.Parameters.AddWithValue("@AccountNumber", accountNumber);
+
+                try
+                {
+                    await connection.OpenAsync();
+
+                    // Use ExecuteReaderAsync to read the result set
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        var resultData = new List<Transactions>(); 
+
+                        while (await reader.ReadAsync())
+                        {
+                            
+                            var transaction = new Transactions
+                            {
+
+                                Id = reader.GetInt32(reader.GetOrdinal("Id")),
+                                DateCreated = reader.GetDateTime(reader.GetOrdinal("DateCreated")),
+                                Amount = reader.GetDecimal(reader.GetOrdinal("Amount")),
+                                AccountNumber = reader.GetString(reader.GetOrdinal("AccountNumber")),
+                                SenderName = reader.IsDBNull(reader.GetOrdinal("SenderName")) ? null : reader.GetString(reader.GetOrdinal("SenderName")),
+                                SenderAccount = reader.IsDBNull(reader.GetOrdinal("SenderAccount")) ? null : reader.GetString(reader.GetOrdinal("SenderAccount")),
+                                SenderBank = reader.IsDBNull(reader.GetOrdinal("SenderBank")) ? null : reader.GetString(reader.GetOrdinal("SenderBank")),
+                                Remarks = reader.IsDBNull(reader.GetOrdinal("Remarks")) ? null : reader.GetString(reader.GetOrdinal("Remarks")),
+                                BeneficiaryName = reader.IsDBNull(reader.GetOrdinal("BeneficiaryName")) ? null : reader.GetString(reader.GetOrdinal("BeneficiaryName")),
+                                BeneficiaryAccount = reader.IsDBNull(reader.GetOrdinal("BeneficiaryAccount")) ? null : reader.GetString(reader.GetOrdinal("BeneficiaryAccount")),
+                                BeneficiaryBank = reader.IsDBNull(reader.GetOrdinal("BeneficiaryBank")) ? null : reader.GetString(reader.GetOrdinal("BeneficiaryBank")),
+                                Type = reader.GetString(reader.GetOrdinal("Type")),
+                                TransMethod = reader.GetString(reader.GetOrdinal("TransMethod")),
+                                SessionId = reader.GetString(reader.GetOrdinal("SessionId")),
+                                CustomerAccountId = reader.GetInt32(reader.GetOrdinal("CustomerAccountId"))
+
+
+                            };
+
+                            resultData.Add(transaction);
+                        }
+
+                        return new ResponseData
+                        {
+                            Status = HttpStatusCode.OK,
+                            ResponseMessage = "Successful",
+                            data = resultData
+                        };
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError($"An error occurred: {ex.Message}");
+                    throw;
+                }
+            }
+        }
+
+        public async Task<string> Overdraft()
+        {
+            var result = _dbContext.customerAccount
+                .FirstOrDefault()?.CurrentBalance.ToString();
+
+            return result ?? "Account not found";
+        }
+
+       private bool overDaftAmount(int id)
+        {
+            return false;
         }
     }
 }

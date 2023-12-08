@@ -36,6 +36,13 @@ namespace CustomerService.Controllers
             return await _customerServices.AllPendingAdminUser();
         }
 
+        [HttpGet("AllApprovedCustomerAccount")]
+        [Authorize]
+        public async Task<ResponseData> AllApprovedCustomerAccount()
+        {
+            return await _customerServices.AllApprovedCustomerAccount();
+        }
+
         [HttpPost("ApprovePendingAdmin/{id}")]
         [Authorize]
         public async Task<ResponseData> ApprovePendingAdmin(long id, bool isApprove)
@@ -49,7 +56,7 @@ namespace CustomerService.Controllers
                     return new ResponseData()
                     {
                         Status = HttpStatusCode.OK,
-                        ResponseMessage = "Successful"
+                        ResponseMessage = isApprove ? "User Account Approved" : "User Account Disapproved"
                     };
                 }
 
@@ -81,7 +88,7 @@ namespace CustomerService.Controllers
                     return new ResponseData()
                     {
                         Status = HttpStatusCode.OK,
-                        ResponseMessage = "Successful"
+                        ResponseMessage = isApprove ?  "User Account Approved" : "User Account Disapproved"
                     };
                 }
 
@@ -99,6 +106,40 @@ namespace CustomerService.Controllers
             };
 
         }
+        
+        [HttpGet("GetAccountDetails/{customerid}")]
+        [Authorize]
+        public async Task<ResponseData> GetAccountDetails(int customerid)
+        {
+            return await _customerServices.CustomerAccount(customerid);
+        }
+       
+        [HttpGet("GetAllCustomer")]
+        [Authorize]
+        public async Task<ResponseData> GetAllCustomer(int customerid)
+        {
+            return await _customerServices.GetAllCustomer();
+        }
 
+        [HttpPost("Delete/{customerid}")]
+        [Authorize]
+        public async Task<ResponseData> DeleteCustomer(int customerid)
+        {
+            return await _customerServices.DeleteCustomerAccount(customerid);
+        }
+
+        [HttpPost("DeActivateCustomerAccount/{customerid}")]
+        [Authorize]
+        public async Task<ResponseData> DeActivateCustomerAccount(int customerid)
+        {
+            return await _customerServices.DeActivateCustomerAccount(customerid);
+        }
+
+        [HttpPost("ReActivateCustomerAccount/{customerid}")]
+        [Authorize]
+        public async Task<ResponseData> ReActivateCustomerAccount(int customerid)
+        {
+            return await _customerServices.ReActivateCustomerAccount(customerid);
+        }
     }
 }

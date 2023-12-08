@@ -104,8 +104,6 @@ namespace AuthService.Auths
                 throw ex;
             }
         }
-
-
         public string HashPassword(string password)
         {
             byte[] salt = new byte[16];
@@ -329,7 +327,7 @@ namespace AuthService.Auths
                 throw ex;
             }
         }
-        public async Task<string> ResetPassword(string email)
+        public async Task<ResponseData> ResetPassword(string email)
         {
             var user1 = await _authContext.customer.SingleOrDefaultAsync(u => u.Email == email && u.IsApproved == true);
 
@@ -350,11 +348,20 @@ namespace AuthService.Auths
 
                 await NotifyCustomer(tokens, user1.FirstName);
 
-                return " reset code sent to your email";
+                return new ResponseData()
+                {
+                    Status = HttpStatusCode.OK,
+                    ResponseMessage = "Reset code sent to your email"
+                };
+               
             }
             else
             {
-                return "User not found. Password reset aborted.";
+                return new ResponseData()
+                {
+                    Status = HttpStatusCode.OK,
+                    ResponseMessage = "User not found. Password reset aborted."
+                }; 
             }
         }
 
