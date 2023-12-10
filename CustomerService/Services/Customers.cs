@@ -339,13 +339,13 @@ namespace CustomerService.Services
                             return new ResponseData()
                             {
                                 Status = HttpStatusCode.OK,
-                                ResponseMessage = "Successful"
+                                ResponseMessage = "Account Deleted Successfully"
                             };
                         }
                     return new ResponseData()
                     {
                         Status = HttpStatusCode.NotFound,
-                        ResponseMessage = "Failed"
+                        ResponseMessage = "Failed to delete account"
                     };
                 }
             }
@@ -382,13 +382,13 @@ namespace CustomerService.Services
                         return new ResponseData()
                         {
                             Status = HttpStatusCode.OK,
-                            ResponseMessage = "Successful"
+                            ResponseMessage = "Account Deactivated Successfully"
                         };
                     }
                     return new ResponseData()
                     {
                         Status = HttpStatusCode.NotFound,
-                        ResponseMessage = "Failed"
+                        ResponseMessage = "Fail to Deactivate account"
                     };
                 }
             }
@@ -425,13 +425,13 @@ namespace CustomerService.Services
                         return new ResponseData()
                         {
                             Status = HttpStatusCode.OK,
-                            ResponseMessage = "Successful"
+                            ResponseMessage = "Account Activated Successfully "
                         };
                     }
                     return new ResponseData()
                     {
                         Status = HttpStatusCode.NotFound,
-                        ResponseMessage = "Failed"
+                        ResponseMessage = "Failed to re activate account "
                     };
                 }
             }

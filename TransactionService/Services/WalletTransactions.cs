@@ -1,12 +1,14 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using System.Data;
 using System.Net;
 using System.Threading.Tasks;
 using System.Transactions;
 using TransactionService.Entities;
 using TransactionService.Model;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace TransactionService.Services
 {
@@ -320,7 +322,7 @@ namespace TransactionService.Services
                     {
                         return new ResponseData()
                         {
-                            ResponseMessage = "Successful",
+                            ResponseMessage = "Transfer Successful",
                             Status = HttpStatusCode.OK
                         };
                     }
@@ -347,23 +349,51 @@ namespace TransactionService.Services
             throw new NotImplementedException();
         }
 
-        private async Task<bool> TransactionsDetails(Transactions transactions)
+        private async Task<bool> TransactionsDetails(Transactions transaction)
         {
-            try
+            _logger.LogInformation($"Trasactions:::: {DateTime.UtcNow} :::: {JsonConvert.SerializeObject(transaction) }");
+
+
+            using (var connection = new SqlConnection(_dbContext.Database.GetConnectionString()))
+            using (var command = connection.CreateCommand())
             {
-                _dbContext.transactions.Add(transactions);
-                if (await _dbContext.SaveChangesAsync() > 0)
+                command.CommandText = "sp_Transactions";
+                command.CommandType = CommandType.StoredProcedure;
+
+                // Add parameters
+                command.Parameters.AddWithValue("@status", 3);
+                command.Parameters.AddWithValue("@AccountNumber", transaction.AccountNumber);
+                command.Parameters.AddWithValue("@Amount", transaction.Amount);
+                command.Parameters.AddWithValue("@DateCreated", transaction.DateCreated);
+                command.Parameters.AddWithValue("@SenderName", transaction.SenderName);
+                command.Parameters.AddWithValue("@SenderAccount", transaction.SenderAccount);
+                command.Parameters.AddWithValue("@SenderBank", transaction.SenderBank);
+                command.Parameters.AddWithValue("@Remarks", transaction.Remarks);
+                command.Parameters.AddWithValue("@BeneficiaryName", transaction.BeneficiaryName);
+                command.Parameters.AddWithValue("@BeneficiaryAccount", transaction.BeneficiaryAccount);
+                command.Parameters.AddWithValue("@BeneficiaryBank", transaction.BeneficiaryBank);
+                command.Parameters.AddWithValue("@Type", transaction.Type);
+                command.Parameters.AddWithValue("@TransMethod", transaction.TransMethod);
+                command.Parameters.AddWithValue("@SessionId", transaction.SessionId);
+                command.Parameters.AddWithValue("@CustomerAccountId", transaction.CustomerAccountId);
+
+                try
                 {
-                    return true;
+                    await connection.OpenAsync();
+                   if (await command.ExecuteNonQueryAsync() > 0)
+                    {
+                        return true;
+                    }
+                    return false;
                 }
-                return false;
-            }
-             catch (Exception ex)
-            {
-                throw ex;
+                catch (Exception ex)
+                {
+                    _logger.LogError($"An error occurred: {ex.Message}");
+                    throw;
+                }
+
             }
         }
-
         private  bool viaableTransaction(decimal currentBalance, decimal amount, int id)
         {           
             if (currentBalance > amount)
@@ -451,9 +481,9 @@ namespace TransactionService.Services
         public async Task<string> Overdraft()
         {
             var result = _dbContext.customerAccount
-                .FirstOrDefault()?.CurrentBalance.ToString();
+                .FirstOrDefault()?.OverDraft.ToString();
 
-            return result ?? "Account not found";
+            return result ?? "0";
         }
 
        private bool overDaftAmount(int id)

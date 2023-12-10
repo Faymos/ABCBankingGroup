@@ -116,7 +116,7 @@ namespace CustomerService.Controllers
        
         [HttpGet("GetAllCustomer")]
         [Authorize]
-        public async Task<ResponseData> GetAllCustomer(int customerid)
+        public async Task<ResponseData> GetAllCustomer()
         {
             return await _customerServices.GetAllCustomer();
         }
