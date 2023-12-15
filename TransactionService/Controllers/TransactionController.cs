@@ -147,12 +147,28 @@ namespace TransactionService.Controllers
         }
 
         [HttpGet("Overdraft")]
-        public async Task<ActionResult> Overdraft()
+        public async Task<ActionResult> Overdraft(int customerId)
         {
             try
             {
-                // Assuming WalletAccount is a class with a GetBalance method
-                var result = await _walletTransactions.Overdraft();
+               
+                var result = await _walletTransactions.Overdraft(customerId);
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error: {ex.Message}");
+            }
+        }
+        
+        [HttpGet("WithdrawOverDraft")]
+        public async Task<ActionResult> WithdrawOverDraft(int customerId)
+        {
+            try
+            {
+
+                var result = await _walletTransactions.WithdrawOverDraft(customerId);
 
                 return Ok(result);
             }

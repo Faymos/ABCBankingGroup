@@ -15,5 +15,6 @@ namespace CustomerService.Services
         Task<ResponseData> DeActivateCustomerAccount(int id);
         Task<ResponseData> ReActivateCustomerAccount(int id);
         Task<ResponseData> GetAllCustomer();
+        Task<ResponseData> Summary();
     }
 }

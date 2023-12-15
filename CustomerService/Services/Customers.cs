@@ -473,5 +473,62 @@ namespace CustomerService.Services
                 };
             }
         }
+
+        public async Task<ResponseData> Summary()
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_context.Database.GetConnectionString()))
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "[dbo].[Sp_CustmerDetails]";
+                    command.CommandType = CommandType.StoredProcedure;
+
+                    await connection.OpenAsync();
+
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            var summary = new Summary
+                            {
+                                TotalUser = reader.GetString(reader.GetOrdinal("TotalUser")),
+                                TotalBalance = reader.GetDecimal(reader.GetOrdinal("TotalBalance")),
+                                TotalCredit = reader.GetDecimal(reader.GetOrdinal("TotalCredit")),
+                                TotalDebit = reader.GetDecimal(reader.GetOrdinal("TotalDebit")),
+                                TotalOverDraft = reader.GetDecimal(reader.GetOrdinal("TotalOverDraft")),
+                            };
+
+                            return new ResponseData
+                            {
+                                Status = HttpStatusCode.OK,
+                                ResponseMessage = "Successful",
+                                data = summary
+                            };
+                        }
+                        else
+                        {
+                            return new ResponseData
+                            {
+                                Status = HttpStatusCode.OK,
+                                ResponseMessage = "No record at this time"
+                               
+                            };
+                        }
+                    }
+                }
+            }
+            catch (SqlException sqlEx)
+            {
+                _logger.LogError($"SQL error occurred: {sqlEx.Message}. Procedure: [dbo].[Sp_CustmerDetails]");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"An error occurred: {ex.Message}");
+                throw;
+            }
+        }
+
     }
 }

@@ -133,12 +133,31 @@ namespace TransactionService.Services
 
             if (existingAccount != null)
             {
-                // Update the properties of the existing record with the new values
-                existingAccount.CurrentBalance += amount;
-                existingAccount.CrAmount += amount;
-                existingAccount.TotalBalance += amount;
-                existingAccount.DateUpdated = DateTime.UtcNow;
-               if( await _dbContext.SaveChangesAsync() > 0)
+                var number = (decimal)existingAccount.OverDraft;
+
+                if (Math.Abs(number) <= amount)
+                {
+                    var balance = existingAccount.IsOverdraft ? existingAccount.OverDraft + amount : amount;
+
+                    existingAccount.CurrentBalance += (decimal)balance;
+                    existingAccount.CrAmount += amount;
+                    existingAccount.TotalBalance += amount;
+                    existingAccount.IsOverdraft =false;
+                    existingAccount.OverDraft = 0;
+                    existingAccount.DateUpdated = DateTime.UtcNow;
+                }
+                else
+                {
+
+                    var balanc = existingAccount.IsOverdraft ? existingAccount.OverDraft + amount : amount;
+                    existingAccount.OverDraft = balanc;
+                    existingAccount.CrAmount += amount;
+                    existingAccount.TotalBalance += amount;
+                    existingAccount.DateUpdated = DateTime.UtcNow;
+                }
+
+
+                if ( await _dbContext.SaveChangesAsync() > 0)
                 {
                     if (await TransactionsDetails(transactions))
                     {
@@ -173,7 +192,7 @@ namespace TransactionService.Services
                 var result = await _dbContext.customerAccount
                .FirstOrDefaultAsync(u => u.AccountNumber == accountNumber);
 
-                if (viaableTransaction(result.CurrentBalance, amount,result.Id))
+                if (viaableTransaction(result.CurrentBalance, amount))
                 {
                     Transactions transactions = new()
                     {
@@ -229,7 +248,7 @@ namespace TransactionService.Services
                 var result = await _dbContext.customerAccount
                .FirstOrDefaultAsync(u => u.AccountNumber == accountNumber);
 
-                if (viaableTransaction(result.CurrentBalance, amount, result.Id))
+                if (viaableTransaction(result.CurrentBalance, amount))
                 {
                     var result2 = await _dbContext.customerAccount
                .FirstOrDefaultAsync(u => u.AccountNumber == DestinationAccount);
@@ -348,7 +367,6 @@ namespace TransactionService.Services
         {
             throw new NotImplementedException();
         }
-
         private async Task<bool> TransactionsDetails(Transactions transaction)
         {
             _logger.LogInformation($"Trasactions:::: {DateTime.UtcNow} :::: {JsonConvert.SerializeObject(transaction) }");
@@ -364,7 +382,7 @@ namespace TransactionService.Services
                 command.Parameters.AddWithValue("@status", 3);
                 command.Parameters.AddWithValue("@AccountNumber", transaction.AccountNumber);
                 command.Parameters.AddWithValue("@Amount", transaction.Amount);
-                command.Parameters.AddWithValue("@DateCreated", transaction.DateCreated);
+                //command.Parameters.AddWithValue("@DateCreated", transaction.DateCreated);
                 command.Parameters.AddWithValue("@SenderName", transaction.SenderName);
                 command.Parameters.AddWithValue("@SenderAccount", transaction.SenderAccount);
                 command.Parameters.AddWithValue("@SenderBank", transaction.SenderBank);
@@ -384,7 +402,7 @@ namespace TransactionService.Services
                     {
                         return true;
                     }
-                    return false;
+                    return true;
                 }
                 catch (Exception ex)
                 {
@@ -394,15 +412,11 @@ namespace TransactionService.Services
 
             }
         }
-        private  bool viaableTransaction(decimal currentBalance, decimal amount, int id)
+        private  bool viaableTransaction(decimal currentBalance, decimal amount)
         {           
             if (currentBalance > amount)
             {
                 return true;
-            }
-            else if(overDaftAmount(id))
-            { 
-                return true; 
             }
             return false;
         }
@@ -478,17 +492,75 @@ namespace TransactionService.Services
             }
         }
 
-        public async Task<string> Overdraft()
+        public async Task<ResponseData> Overdraft(int customerId)
         {
-            var result = _dbContext.customerAccount
-                .FirstOrDefault()?.OverDraft.ToString();
+            using (var connection = new SqlConnection(_dbContext.Database.GetConnectionString()))
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = "[dbo].[sp_Transactions]"; // Use the stored procedure name
+                command.CommandType = CommandType.StoredProcedure;
 
-            return result ?? "0";
+                // Add parameters
+                command.Parameters.AddWithValue("@status", 4);
+                command.Parameters.AddWithValue("@CustomerId", customerId);
+                
+
+                try
+                {
+                    await connection.OpenAsync();
+                    var result = await command.ExecuteNonQueryAsync();
+                   
+                    return new ResponseData()
+                    {
+                        Status = HttpStatusCode.OK,
+                        ResponseMessage =  result> 0? "Overdraft Updated successfully ": "no overdraft at this time kindly check back later",                            
+                    };
+                    
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError($"An error occurred: {ex.Message}");
+                    throw;
+                }
+            }
         }
 
-       private bool overDaftAmount(int id)
+        public async Task<ResponseData> WithdrawOverDraft(int customerId)
         {
-            return false;
+            try
+            {
+                using (var connection = new SqlConnection(_dbContext.Database.GetConnectionString()))
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "[dbo].[sp_Transactions]";
+                    command.CommandType = CommandType.StoredProcedure;
+
+                    // Add parameters
+                    command.Parameters.AddWithValue("@Status", 5);
+                    command.Parameters.AddWithValue("@CustomerId", customerId);
+                    command.Parameters.AddWithValue("@SessionId", getSessionId());
+
+                    await connection.OpenAsync();
+                    var result = await command.ExecuteNonQueryAsync();
+                    
+                    return new ResponseData()
+                    {
+                        Status = HttpStatusCode.OK,
+                        ResponseMessage = "Successful"
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the exception or handle it in a meaningful way
+                _logger.LogError($"An error occurred: {ex.Message}");
+
+                return new ResponseData()
+                {
+                    Status = HttpStatusCode.BadGateway,
+                    ResponseMessage = $"failed {ex.Message}"
+                };
+            }
         }
     }
 }

@@ -20,5 +20,12 @@ namespace CustomerService.Models
         public int CustomerId { get; set; }
         public bool IsActive { get; set; }
     }
-
+    public class Summary
+    {
+        public string? TotalUser { get; set; }
+        public decimal TotalBalance { get; set; }
+        public decimal TotalDebit { get; set; }
+        public decimal TotalCredit { get; set; }
+        public decimal TotalOverDraft { get; set; }
+    }
 }

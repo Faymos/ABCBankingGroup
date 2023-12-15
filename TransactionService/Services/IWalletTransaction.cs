@@ -12,6 +12,7 @@ namespace TransactionService.Services
         Task<ResponseData> Transfer(string accountNumber, string DestinationAccount, decimal amount);
         Task<ResponseData> TransferToOtherBank(string accountNumber, string DestinationAccount,string bankCode, decimal amount);
         Task<string> AccountVerification(string accountNumber);
-        Task<string> Overdraft();
+        Task<ResponseData> Overdraft(int customerId);
+        Task<ResponseData> WithdrawOverDraft(int customerId); 
     }
 }

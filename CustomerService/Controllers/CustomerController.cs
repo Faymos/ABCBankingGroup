@@ -141,5 +141,12 @@ namespace CustomerService.Controllers
         {
             return await _customerServices.ReActivateCustomerAccount(customerid);
         }
+
+        [HttpPost("summary")]
+        [Authorize]
+        public async Task<ResponseData> Summary()
+        {
+            return await _customerServices.Summary();
+        }
     }
 }
